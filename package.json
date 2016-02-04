@@ -1,0 +1,21 @@
+{
+  "name": "node-deploy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "bin": {
+    "node-deploy": "main.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "none",
+  "dependencies": {
+    "async": "^1.5.2",
+    "commander": "^2.9.0",
+    "digital-ocean-api": "^0.2.0",
+    "home": "^1.0.1",
+    "nodemiral": "^1.1.1"
+  }
+}
