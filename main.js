@@ -68,6 +68,7 @@ function listDroplets(cb) {
     if(err) {
       return cb(err);
     }
+    dropletsList = [];
     droplets.forEach(function (droplet) {
       if(droplet.name.indexOf(config.name) === 0) {
         dropletsList.push(droplet);
@@ -80,20 +81,52 @@ function listDroplets(cb) {
 
 
 function scale(amount) {
-  var options = {
-    name: config.name + '-' + new Date().getTime(),
-    region: 'nyc1',
-    ssh_keys: [config.sshKeyDO],
-    size: '512mb',
-    image: 'ubuntu-15-10-x64',
-    backups: false,
-    ipv6: false,
-    private_networking: false
-  };
-  console.dir(options);
-  api.createDroplet(options, function (e, r) {
-    console.log(e, r);
-  });
+  var created = 0;
+  for (var i = 0; i < amount; i++) {
+    var options = {
+      name: config.name + '-' + new Date().getTime() + '-' + Math.random(),
+      region: 'nyc1',
+      ssh_keys: [config.sshKeyDO],
+      size: '512mb',
+      image: 'ubuntu-15-10-x64',
+      backups: false,
+      ipv6: false,
+      private_networking: false
+    };
+    console.dir(options);
+    api.createDroplet(options, function (e, r) {
+      // console.log(e, r);
+      created += 1;
+      console.log('created ', created, '/', amount);
+
+    });
+  }
+
+  // wait until all are active
+  var interval = setInterval(function () {
+    listDroplets(function (err, list) {
+      var running = 0;
+      var total = list.length;
+
+      list.forEach(function (droplet) {
+        if(droplet.status === 'active') {
+          running += 1;
+        }
+      });
+      console.log(running, '/', total, 'droplets are running');
+      if(running == total) {
+        clearInterval(interval);
+        setup(function (e) {
+          if(e) {
+            return;
+          }
+          deploy();
+        });
+
+      }
+    });
+  }, 15000);
+
 }
 
 function createSessions(droplets, done) {
