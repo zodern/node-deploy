@@ -6,22 +6,9 @@
 sudo apt-get update -y
 
 # Install node
-
-NODE_VERSION=0.12.0
-NODE_ARCH=x64
-
-sudo apt-get -y install build-essential libssl-dev git curl
-
-NODE_DIST=node-v${NODE_VERSION}-linux-${NODE_ARCH}
-
-cd /tmp
-wget http://nodejs.org/dist/v${NODE_VERSION}/${NODE_DIST}.tar.gz
-tar xvzf ${NODE_DIST}.tar.gz
-sudo rm -rf /opt/nodejs
-sudo mv ${NODE_DIST} /opt/nodejs
-
-sudo ln -sf /opt/nodejs/bin/node /usr/bin/node
-sudo ln -sf /opt/nodejs/bin/npm /usr/bin/npm
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.30.2/install.sh | bash
+nvm install 0.12.0
+nvm use 0.12.0
 
 sudo npm install -g pm2
 
