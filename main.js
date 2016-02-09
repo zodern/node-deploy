@@ -162,37 +162,44 @@ function testSession(droplets, done) {
 
 function install(droplets, done) {
   console.log('-- installing deps --');
-  async.forEach(droplets, function (droplet, done) {
+  async.forEachSeries(droplets, function (droplet, done) {
     console.log('-- starting deps install for a droplet --');
-    droplet.session.executeScript(path.resolve(SCRIPT_DIR,'install.sh'), function (e, code, log) {
+    droplet.session.executeScript(path.resolve(SCRIPT_DIR, 'install.sh'), function (e, code, log) {
       console.log(e);
       console.log(code);
-      console.log(log.stdout)
+      console.log(log.stdout);
+      done(null);
     });
   }, function (e, r) {
+    console.log('finished install');
     done(e, droplets);
   });
 }
 
 function userInstall(droplets, done) {
   if(!config.installScript) {
+    console.log('-- no app install script --');
     done(null, droplets);
   }
+  console.log('-- installing app install script --');
   var scriptPath = path.resolve(cwd, config.installScript);
-  async.forEach(droplets, function (droplet, done) {
-    droplet.session.executeScript(scriptPath, function (e, code, log) {
+  async.forEachSeries(droplets, function (droplet, done) {
+    droplet.session.executeScript(scriptPath, function (err, code, log) {
       console.log('code', code);
       console.log(log.stderr);
       console.log(log.stdout);
       console.log('err', err);
-      done(err);
+      console.log('finished droplet');
+      done(null);
     });
   }, function (e, r) {
+    console.log('finished install');
     done(e, droplets);
   })
 }
 
-function setup() {
+function setup(cb) {
+  console.log('-- setting up --');
   async.waterfall([
     listDroplets,
     createSessions,
@@ -201,7 +208,12 @@ function setup() {
     userInstall
   ], function (err, res) {
     console.log(err);
-    console.log('-- finished --')
+    console.log('-- finished setting up droplets--');
+
+    if(typeof cb === 'function') {
+      cb(err);
+    }
+
   });
 }
 
@@ -230,10 +242,14 @@ function getSessions(options, done) {
 
 function upload(options, done) {
   console.log('-- uploading code --');
-  async.forEach(options.droplets, function (droplet, done) {
+  async.forEachSeries(options.droplets, function (droplet, done) {
+    console.log('starting upload for droplet');
     droplet.session.copy(options.bundle, '/tmp/bundle.tgz', {
       progressBar: true
     }, function (err, res) {
+      if(err) {
+        console.log('error uploading');
+      }
       done(err, options);
     });
   }, function (e, res) {
@@ -245,7 +261,7 @@ function upload(options, done) {
 function startApp(options, done) {
   console.log('-- starting app --');
   async.forEach(options.droplets, function (droplet, done) {
-    droplet.session.executeScript(path.join(SCRIPT_DIR, 'deploy.sh'),  {
+    droplet.session.executeScript(path.join(SCRIPT_DIR, 'deploy.sh'), {
       vars: {
         ip: droplet.networks.v4[0].ip_address
       }
