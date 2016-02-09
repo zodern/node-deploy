@@ -30,13 +30,17 @@ read -d '' SETTINGS <<"EOF"
   {
     "apps": [
       {
-        "name": "MyMeteorApp",
-        "script": " && cd /app/package && /usr/bin/npm start",
-        "log_date_format": "YYYY-MM-DD",
-        "exec_mode": "fork_mode",
-        "exec_interpreter": "bash",
-        "env": {
-          "ip": "<%= ip %>"
+       "name": "app",
+        "script": "/bin/bash",
+          "args": [
+            "-c",
+            "-o",
+            "pipefail",
+            "cd /app/package && /usr/bin/npm start"
+          ],
+       "log_date_format": "YYYY-MM-DD",
+       "env": {
+         "ip": "<%= ip %>"
         }
       }
     ]
@@ -47,6 +51,7 @@ cd ..
 echo $SETTINGS > app.json
 
 
-pm2 stop all
+pm2 stop app
+pm2 delete app
 pm2 start app.json
 pm2 startup
