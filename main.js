@@ -5,16 +5,15 @@ var path      = require('path'),
     nodemiral = require('nodemiral'),
     async     = require('async'),
     home      = require('home'),
-    child     = require('child_process');
+    child     = require('child_process'),
+    select    = require('select-shell');
+
 var dropletCommands = require('./lib/commands/droplets.js'),
     config          = require('./lib/config.js');
 
 var SCRIPT_DIR = __dirname + '/scripts/';
 var cwd = path.resolve('.');
 
-// check for deploy.json
-var file = fs.readFileSync(path.resolve(cwd, 'deploy.json'));
-var config = JSON.parse(file);
 
 var DigitalOceanApi = require('digital-ocean-api');
 
@@ -41,7 +40,11 @@ program
       if(err) {
         return console.log(err);
       }
-      console.log(JSON.stringify(result, null, 2));
+      result.forEach(function (droplet) {
+        console.log(droplet.name + ' ( ' + droplet.networks.v4[0].ip_address + ' )');
+      });
+      process.exit(0);
+      // console.log(JSON.stringify(result, null, 2));
     });
   });
 
@@ -68,7 +71,50 @@ program
   .command('silk')
   .description('Opens silk for a server')
   .action(silk);
+
+program
+  .command('restart')
+  .description('Restarts the app')
+  .action(restart);
+
+program
+  .command('run <command>')
+  .description('Run a command')
+  .action(function (command) {
+    async.waterfall([
+      function (done) {
+        done(null, {});
+      },
+      getSessions,
+      selectDroplet,
+      function (options, next) {
+        var droplet = options.droplet;
+        console.log('--- running' + command + ' ---');
+        droplet.session.execute('TERM=linux top', {
+          onStdout: function (data) {
+            process.stdout.write(data.toString());
+          },
+          onStderr: function (data) {
+            process.stderr.write(data.toString());
+          }
+        }, function () {
+          next(null, options);
+        });
+      }
+    ], function (e) {
+      if(e) {
+        console.log(e);
+      }
+      console.log("--- finished running command ---");
+    })
+  });
+
 program.parse(process.argv);
+
+if(process.argv.length === 2) {
+  program.outputHelp();
+  process.exit(0);
+}
 
 
 var dropletsList = [];
@@ -82,8 +128,6 @@ function listDroplets(cb) {
     list = [];
     droplets.forEach(function (droplet) {
       if(droplet.name.indexOf(config.name) === 0) {
-        dropletsList.push(droplet);
-        console.log('droplets in app', dropletsList.length);
         list.push(droplet);
       }
     });
@@ -117,7 +161,7 @@ function scale(amount) {
 
   // wait until all are active
   var interval = setInterval(function () {
-    listDroplets(function (err, list) {
+    dropletCommands.list(false, function (err, list) {
       var running = 0;
       var total = list.length;
 
@@ -177,11 +221,15 @@ function install(droplets, done) {
   console.log('-- installing deps --');
   async.forEachSeries(droplets, function (droplet, done) {
     console.log('-- starting deps install for a droplet --');
-    droplet.session.executeScript(path.resolve(SCRIPT_DIR, 'install.sh'), function (e, code, log) {
-      console.log(e);
-      console.log(code);
-      console.log(log.stdout);
-      done(null);
+    droplet.session.executeScript(path.resolve(SCRIPT_DIR, 'install.sh'), {
+      onStdout: function (data) {
+        process.stdout.write(data.toString());
+      },
+      onStderr: function (data) {
+        process.stderr.write(data.toString());
+      }
+    }, function (e, code, log) {
+      done(e);
     });
   }, function (e, r) {
     console.log('finished install');
@@ -192,7 +240,7 @@ function install(droplets, done) {
 function userInstall(droplets, done) {
   if(!config.installScript) {
     console.log('-- no app install script --');
-    done(null, droplets);
+    return done(null, droplets);
   }
   console.log('-- installing app install script --');
   var scriptPath = path.resolve(cwd, config.installScript);
@@ -214,7 +262,7 @@ function userInstall(droplets, done) {
 function setup(cb) {
   console.log('-- setting up --');
   async.waterfall([
-    listDroplets,
+    dropletCommands.list,
     createSessions,
     testSession,
     install,
@@ -225,6 +273,8 @@ function setup(cb) {
 
     if(typeof cb === 'function') {
       cb(err);
+    } else {
+      process.exit(0);
     }
 
   });
@@ -235,7 +285,6 @@ function pack(options, done) {
   child.exec('npm pack ' + cwd, {
     cwd: path.resolve(cwd, '.node-deploy')
   }, function (err, stdout, stderr) {
-    console.log(err);
     console.log(stdout);
     options.bundle = path.resolve(cwd, '.node-deploy', stdout.trim());
     done(err, options);
@@ -244,7 +293,7 @@ function pack(options, done) {
 
 function getSessions(options, done) {
   console.log('-- getting list of servers --');
-  listDroplets(function (err, droplets) {
+  dropletCommands.list(true, function (err, droplets) {
     console.log('-- connecting to server --');
     createSessions(droplets, function (err, droplets) {
       options.droplets = droplets;
@@ -273,8 +322,14 @@ function upload(options, done) {
 
 function startApp(options, done) {
   console.log('-- starting app --');
-  async.forEach(options.droplets, function (droplet, done) {
+  async.forEachSeries(options.droplets, function (droplet, done) {
     droplet.session.executeScript(path.join(SCRIPT_DIR, 'deploy.sh'), {
+      onStdout: function (data) {
+        process.stdout.write(data.toString());
+      },
+      onStderr: function (data) {
+        process.stderr.write(data.toString());
+      },
       vars: {
         ip: droplet.networks.v4[0].ip_address
       }
@@ -318,6 +373,10 @@ function deploy() {
       console.log('e');
     }
     console.log('-- finished --');
+    process.exit(0);
+  });
+}
+
 function selectDroplet(options, done) {
   console.log("select server");
   var list = select({
@@ -389,6 +448,41 @@ function logs() {
     showLogs
   ], function (e, r) {
 
+  });
+}
+
+function restartApp(options, next) {
+  var droplet = options.droplet;
+  console.log('--- restarting ---');
+  droplet.session.execute('pm2 restart 0', {
+    onStdout: function (data) {
+      process.stdout.write(data.toString());
+    },
+    onStderr: function (data) {
+      process.stderr.write(data.toString());
+    }
+  }, function () {
+    next(null, options);
+  });
+}
+
+
+function restart() {
+  console.log('--- restarting app ---');
+
+  async.waterfall([
+    function (next) {
+      next(null, {});
+    },
+    getSessions,
+    selectDroplet,
+    restartApp
+  ], function (e, r) {
+    if(e) {
+      console.log(e);
+    }
+    console.log('--- finished restarting ---');
+    process.exit(0);
   });
 }
 
