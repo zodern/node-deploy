@@ -12,7 +12,7 @@ sudo rm -rf $UNTAR
 
 sudo mkdir $UNTAR
 
-sudo tar -zxvf $BUNDLE -C $UNTAR
+sudo tar -zxvf $BUNDLE -C $UNTAR > /dev/null
 cd $APP_TMP
 echo $PWD
 ls
@@ -53,7 +53,7 @@ cd ..
 echo $SETTINGS > app.json
 
 
-pm2 stop app
-pm2 delete app
+pm2 stop app > /dev/null
+pm2 delete app > /dev/null
 pm2 start app.json
-pm2 startup
+pm2 startup > /dev/null
