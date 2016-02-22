@@ -6,6 +6,8 @@ var path      = require('path'),
     async     = require('async'),
     home      = require('home'),
     child     = require('child_process');
+var dropletCommands = require('./lib/commands/droplets.js'),
+    config          = require('./lib/config.js');
 
 var SCRIPT_DIR = __dirname + '/scripts/';
 var cwd = path.resolve('.');
@@ -35,7 +37,7 @@ program
   .command('list')
   .description('Lists droplets for app')
   .action(function () {
-    listDroplets(function (err, result) {
+    dropletCommands.list(true, function (err, result) {
       if(err) {
         return console.log(err);
       }
