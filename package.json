@@ -1,10 +1,10 @@
 {
-  "name": "node-deploy",
+  "name": "ndeploy",
   "version": "1.0.0",
-  "description": "",
+  "description": "Easily deploy and scale apps on Digital Ocean",
   "main": "main.js",
   "bin": {
-    "node-deploy": "main.js"
+    "ndeploy": "main.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,9 +13,11 @@
   "license": "none",
   "dependencies": {
     "async": "^1.5.2",
+    "blessed": "^0.1.81",
     "commander": "^2.9.0",
     "digital-ocean-api": "^0.2.0",
     "home": "^1.0.1",
-    "nodemiral": "^1.1.1"
+    "nodemiral": "^1.1.1",
+    "term-list": "git+https://git@github.com/luizstacio/select-shell.git"
   }
 }
