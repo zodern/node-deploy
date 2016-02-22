@@ -10,7 +10,12 @@ sudo apt-get update -y
 NODE_VERSION=0.12.0
 NODE_ARCH=x64
 
-sudo apt-get -y install build-essential libssl-dev git curl
+sudo apt-get -y install build-essential libssl-dev git curl authbind
+sudo touch /etc/authbind/byport/80
+sudo chown %user% /etc/authbind/byport/80
+sudo chmod 755 /etc/authbind/byport/80
+authbind --deep pm2 update
+echo  'alias pm2=\'authbind --deep pm2\'' >> ~/.bashrc
 
 NODE_DIST=node-v${NODE_VERSION}-linux-${NODE_ARCH}
 
