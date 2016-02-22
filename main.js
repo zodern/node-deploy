@@ -57,6 +57,10 @@ program
     setup();
   });
 
+program
+  .command('logs')
+  .description('Shows log for selected server')
+  .action(logs);
 program.parse(process.argv);
 
 
@@ -68,14 +72,16 @@ function listDroplets(cb) {
     if(err) {
       return cb(err);
     }
-    dropletsList = [];
+    list = [];
     droplets.forEach(function (droplet) {
       if(droplet.name.indexOf(config.name) === 0) {
         dropletsList.push(droplet);
         console.log('droplets in app', dropletsList.length);
+        list.push(droplet);
       }
     });
-    cb(err, dropletsList);
+    console.log('droplets in app', list.length);
+    cb(err, list);
   });
 }
 
@@ -305,6 +311,65 @@ function deploy() {
       console.log('e');
     }
     console.log('-- finished --');
+function selectDroplet(options, done) {
+  console.log("select server");
+  var list = select({
+    multiSelect: false
+  });
+  var map = {};
+  options.droplets.forEach(function (droplet, i) {
+    list.option(droplet.networks.v4[0].ip_address);
+    map[droplet.networks.v4[0].ip_address] = i;
+  });
+  list.list();
+  list.on('select', function (selection) {
+    options.droplet = options.droplets[map[selection[0].value]];
+
+    done(null, options);
+  });
+
+
+  //list.on('keypress', function (key, item) {
+  //  if(key.name === 'return') {
+  //    console.log(item);
+  //    //list.stop();
+  //    options.droplets = [
+  //      options.droplets[item]
+  //    ];
+  //    done(null, options);
+  //  }
+  //});
+
+}
+
+function showLogs(options, next) {
+  //console.dir(options.droplets[0]);
+  var droplet = options.droplet;
+  droplet.session.execute('pm2 logs app', {
+    onStdout: function (data) {
+      process.stdout.write(data.toString());
+    },
+    onStderr: function (data) {
+      process.stderr.write(data.toString());
+    }
+  });
+
+  process.stdin.on('keypress', function () {
+    console.log('=========== keypress =========');
+  });
+
+}
+
+function logs() {
+  async.waterfall([
+    function (next) {
+      next(null, {});
+    },
+    getSessions,
+    selectDroplet,
+    showLogs
+  ], function (e, r) {
+
   });
 }
 
