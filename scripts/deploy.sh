@@ -40,7 +40,8 @@ read -d '' SETTINGS <<"EOF"
           ],
        "log_date_format": "YYYY-MM-DD",
        "env": {
-         "ip": "<%= ip %>"
+         "ip": "<%= ip %>",
+         "NODE_ENV": "production",
          "PORT": 80
         }
       }
