@@ -29,6 +29,7 @@ sudo ln -sf /opt/nodejs/bin/node /usr/bin/node
 sudo ln -sf /opt/nodejs/bin/npm /usr/bin/npm
 
 sudo npm install -g pm2
+sudo npm install -gf git+https://git@github.com/zodern/Silk.git
 
 # Install PhantomJS
  sudo apt-get -y install libfreetype6 libfreetype6-dev fontconfig > /dev/null

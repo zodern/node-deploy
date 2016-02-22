@@ -61,6 +61,11 @@ program
   .command('logs')
   .description('Shows log for selected server')
   .action(logs);
+
+program
+  .command('silk')
+  .description('Opens silk for a server')
+  .action(silk);
 program.parse(process.argv);
 
 
@@ -360,6 +365,18 @@ function showLogs(options, next) {
 
 }
 
+function openSilk(options, next) {
+  var droplet = options.droplets[0];
+  droplet.session.execute('silk', {
+    onStdout: function (data) {
+      process.stdout.write(data.toString());
+    },
+    onStderr: function (data) {
+      process.stderr.write(data.toString());
+    }
+  });
+}
+
 function logs() {
   async.waterfall([
     function (next) {
@@ -373,4 +390,16 @@ function logs() {
   });
 }
 
+function silk() {
+  async.waterfall([
+    function (next) {
+      next(null, {});
+    },
+    getSessions,
+    selectDroplet,
+    openSilk
+  ], function () {
+
+  });
+}
 
